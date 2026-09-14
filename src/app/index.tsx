@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Image,
   SafeAreaView,
   ScrollView,
@@ -25,51 +26,32 @@ interface Product {
 }
 
 // ==========================================
-// 2. Mock Products Data (From Slide)
+// 2. Using your specific GitHub Raw URL (วางแทนที่ข้อมูลชุดเดิม)
 // ==========================================
-const products: Product[] = [
-  {
-    id: '1',
-    name: 'Pompompurin',
-    stock: 1,
-    category: 'Type-C+Type-C',
-    location: '3 stores',
-    status: 'Active',
-    imageUrl: 'https://down-th.img.susercontent.com/file/cn-11134207-7r98o-m05kjdjafft352@resize_w450_nl.webp',
-  },
-  {
-    id: '2',
-    name: 'Hello Kitty',
-    stock: 2,
-    category: 'Type-C+Type-C',
-    location: '5 stores',
-    status: 'Active',
-    imageUrl: 'https://down-th.img.susercontent.com/file/cn-11134207-7r98o-m05kjdjaff4e0f@resize_w450_nl.webp',
-  },
-  {
-    id: '3',
-    name: 'Kuromi',
-    stock: 5,
-    category: 'Type-C+Type-C',
-    location: '7 stores',
-    status: 'Active',
-    imageUrl: 'https://down-th.img.susercontent.com/file/cn-11134207-7r98o-m05kjeremvnr94@resize_w450_nl.webp',
-  },
-  {
-    id: '4',
-    name: 'My Melody',
-    stock: 8,
-    category: 'Type-C+Type-C',
-    location: '8 stores',
-    status: 'Active',
-    imageUrl: 'https://down-th.img.susercontent.com/file/cn-11134207-7r98o-m05kjhj0l3da77@resize_w450_nl.webp',
-  },
-];
+const GITHUB_JSON_URL = 'https://raw.githubusercontent.com/nontanaphubun/My-Project-Sanrio-Nontana-Json/refs/heads/main/json.json';
 
 // ==========================================
 // 3. Main Functional Component (UI Layout)
 // ==========================================
 const ProductsScreen: React.FC = () => {
+  // สร้าง State สำหรับรองรับและเก็บข้อมูลที่ดึงมาจาก GitHub
+  const [productsListState, setProductsListState] = useState<Product[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  // สั่งให้แอปพลิเคชันทำการเรียกข้อมูลทันทีเมื่อเปิดหน้าจอนี้ขึ้นมา
+  useEffect(() => {
+    fetch(GITHUB_JSON_URL)
+      .then((response) => response.json())
+      .then((data: Product[]) => {
+        setProductsListState(data); // เอาข้อมูลที่ดึงได้ไปเก็บใน State
+        setLoading(false);          // โหลดเสร็จเรียบร้อย ปิดตัว Loading
+      })
+      .catch((error) => {
+        console.error('Error fetching data from GitHub:', error);
+        setLoading(false);
+      });
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -103,34 +85,43 @@ const ProductsScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {/* --- Scrollable Product List Section --- */}
-      <ScrollView style={styles.productsList} showsVerticalScrollIndicator={false}>
-        {products.map((product) => (
-          <View key={product.id} style={styles.productCard}>
-            <View style={styles.productInfo}>
-              <Image 
-                source={{ uri: product.imageUrl }} 
-                style={styles.productImage}
-                resizeMode="cover"
-              />
-              <View style={styles.productDetails}>
-                <Text style={styles.stockText}>Stock: {product.stock} in stock</Text>
-                <Text style={styles.categoryText}>Category: {product.category}</Text>
-                <Text style={styles.locationText}>Location: {product.location}</Text>
+      {/* --- ส่วนเช็คการดาวน์โหลดข้อมูล (Loading Screen) --- */}
+      {loading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#8B5CF6" />
+          <Text style={{ marginTop: 10, color: 'white', fontWeight: 'bold' }}>กำลังดึงข้อมูลสินค้าจาก GitHub...</Text>
+        </View>
+      ) : (
+        /* --- Scrollable Product List Section --- */
+        <ScrollView style={styles.productsList} showsVerticalScrollIndicator={false}>
+          {/* เปลี่ยนมาใช้ข้อมูลจาก State ที่ได้จากการดึงผ่าน GitHub */}
+          {productsListState.map((product) => (
+            <View key={product.id} style={styles.productCard}>
+              <View style={styles.productInfo}>
+                <Image 
+                  source={{ uri: product.imageUrl }} 
+                  style={styles.productImage}
+                  resizeMode="cover"
+                />
+                <View style={styles.productDetails}>
+                  <Text style={styles.stockText}>Stock: {product.stock} in stock</Text>
+                  <Text style={styles.categoryText}>Category: {product.category}</Text>
+                  <Text style={styles.locationText}>Location: {product.location}</Text>
+                </View>
+                <View style={styles.productActions}>
+                  <TouchableOpacity style={styles.statusButton}>
+                    <Text style={styles.statusText}>{product.status}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.moreButton}>
+                    <Text style={styles.moreIcon}>&gt;</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-              <View style={styles.productActions}>
-                <TouchableOpacity style={styles.statusButton}>
-                  <Text style={styles.statusText}>{product.status}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.moreButton}>
-                  <Text style={styles.moreIcon}>&gt;</Text>
-                </TouchableOpacity>
-              </View>
+              <Text style={styles.productName}>{product.name}</Text>
             </View>
-            <Text style={styles.productName}>{product.name}</Text>
-          </View>
-        ))}
-      </ScrollView>
+          ))}
+        </ScrollView>
+      )}
 
       {/* --- Bottom Navigation Section --- */}
       <View style={styles.bottomNav}>
@@ -166,8 +157,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ff1ff4',
   },
-  
-  // Header Styles
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -205,8 +194,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'white',
   },
-
-  // Search Container Styles
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -257,8 +244,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-
-  // Product List Styles
   productsList: {
     flex: 1,
     padding: 20,
@@ -335,8 +320,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
   },
-
-  // Bottom Navigation Styles
   bottomNav: {
     flexDirection: 'row',
     backgroundColor: 'white',
@@ -359,5 +342,4 @@ const styles = StyleSheet.create({
   },
 });
 
-// Export Component
 export default ProductsScreen;
