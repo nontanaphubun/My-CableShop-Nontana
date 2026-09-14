@@ -50,11 +50,41 @@ const products = [
 
 app.get('/api/products', async (req, res) => {
   try {
-    const [rows] = await pool.query(
-      'SELECT * FROM products ORDER BY Product_ID ASC'
+    const { q = '', page = 1, limit = 20 } = req.query;
+
+    const pageNumber = Number(page);
+    const limitNumber = Number(limit);
+    const offset = (pageNumber - 1) * limitNumber;
+
+    const search = `%${q}%`;
+
+    const [items] = await pool.query(
+      `SELECT *
+       FROM products
+       WHERE Name LIKE ?
+          OR Category LIKE ?
+          OR Productcode LIKE ?
+       ORDER BY Product_ID ASC
+       LIMIT ? OFFSET ?`,
+      [search, search, search, limitNumber, offset]
     );
 
-    res.json(rows);
+    const [countRows] = await pool.query(
+      `SELECT COUNT(*) AS total
+       FROM products
+       WHERE Name LIKE ?
+          OR Category LIKE ?
+          OR Productcode LIKE ?`,
+      [search, search, search]
+    );
+
+    res.json({
+      items,
+      total: countRows[0].total,
+      page: pageNumber,
+      limit: limitNumber
+    });
+
   } catch (error) {
     console.error('GET products error:', error.message);
     res.status(500).json({

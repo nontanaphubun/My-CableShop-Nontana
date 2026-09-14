@@ -77,6 +77,28 @@ const removeFromCart = (index: number) => {
   setCart(cart.filter((_, i) => i !== index));
 };
 
+const handleSearch = async () => {
+  try {
+    const response = await fetch(
+      `${API_URL}/api/products?q=${encodeURIComponent(searchQuery)}&page=1&limit=20`
+    );
+
+    const data = await response.json();
+
+    const formattedProducts = data.items.map((item: any) => ({
+      id: String(item.Product_ID),
+      name: item.Name,
+      type: item.Category,
+      price: 0,
+      stock: item.Stock,
+    }));
+
+    setProducts(formattedProducts);
+  } catch (error) {
+    console.error('Search products error:', error);
+  }
+};
+
 const handleAddProduct = async () => {
   if (
     !newProduct.name ||
@@ -401,6 +423,7 @@ const handleSaveEdit = async () => {
     placeholder="🔍  Search products..."
     value={searchQuery}
     onChangeText={setSearchQuery}
+    onSubmitEditing={handleSearch}
   />
 
 <TouchableOpacity
