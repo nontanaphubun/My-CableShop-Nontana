@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 
 const initialProducts = [
@@ -15,6 +15,7 @@ const initialProducts = [
     type: 'USB-C',
     price: 199,
     stock: 15,
+    image: '',
   },
   {
     id: '2',
@@ -22,6 +23,7 @@ const initialProducts = [
     type: 'Lightning',
     price: 249,
     stock: 10,
+    image: '',
   },
   {
     id: '3',
@@ -29,640 +31,185 @@ const initialProducts = [
     type: 'USB-C to USB-C',
     price: 299,
     stock: 8,
+    image: '',
   },
 ];
 
-export default function HomeScreen() {
-  const API_URL = 'http://119.59.102.161:3087';
-  const [products, setProducts] = useState(initialProducts);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [editingProduct, setEditingProduct] = useState<(typeof initialProducts)[number] | null>(null);
-  const [cart, setCart] = useState<(typeof initialProducts)[number][]>([]);
-  const [showCart, setShowCart] = useState(false);
-  const [showCheckout, setShowCheckout] = useState(false);
-
-  const [showAddForm, setShowAddForm] = useState(false);
-
-    useEffect(() => {
-    fetch(`${API_URL}/api/products`)
-      .then((response) => response.json())
-      .then((data) => {
-        const formattedProducts = data.map((item: any) => ({
-          id: String(item.Product_ID),
-          name: item.Name,
-          type: item.Category,
-          price: 0,
-          stock: item.Stock,
-        }));
-
-        setProducts(formattedProducts);
-      })
-      .catch((error) => {
-        console.error('GET products error:', error);
-      });
-  }, []);
-
-const [newProduct, setNewProduct] = useState({
-  name: '',
-  type: '',
-  price: '',
-  stock: '',
-});
-
-  const addToCart = (product: (typeof initialProducts)[number]) => {
-  setCart([...cart, product]);
-};
-
-const removeFromCart = (index: number) => {
-  setCart(cart.filter((_, i) => i !== index));
-};
-
-const handleSearch = async () => {
-  try {
-    const response = await fetch(
-      `${API_URL}/api/products?q=${encodeURIComponent(searchQuery)}&page=1&limit=20`
-    );
-
-    const data = await response.json();
-
-    const formattedProducts = data.items.map((item: any) => ({
-      id: String(item.Product_ID),
-      name: item.Name,
-      type: item.Category,
-      price: 0,
-      stock: item.Stock,
-    }));
-
-    setProducts(formattedProducts);
-  } catch (error) {
-    console.error('Search products error:', error);
-  }
-};
-
-const handleAddProduct = async () => {
-  if (
-    !newProduct.name ||
-    !newProduct.type ||
-    !newProduct.price ||
-    !newProduct.stock
-  ) {
-    return;
-  }
-
-  try {
-    const response = await fetch(`${API_URL}/api/products`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        Productcode: `USB-C-${Date.now()}`,
-        Name: newProduct.name,
-        Stock: Number(newProduct.stock),
-        Category: newProduct.type,
-        Location: 'Sriracha',
-        Status: 'Active',
-        image: null,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.log(data);
-      return;
-    }
-
-    const refreshResponse = await fetch(`${API_URL}/api/products`);
-    const refreshData = await refreshResponse.json();
-
-    const formattedProducts = refreshData.map((item: any) => ({
-      id: String(item.Product_ID),
-      name: item.Name,
-      type: item.Category,
-      price: 0,
-      stock: item.Stock,
-    }));
-
-    setProducts(formattedProducts);
-
-    setNewProduct({
-      name: '',
-      type: '',
-      price: '',
-      stock: '',
-    });
-
-    setShowAddForm(false);
-  } catch (error) {
-    console.error('Add product error:', error);
-  }
-};
-
-    const filteredProducts = products.filter((product) =>
-     product.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const handleDelete = (id: string) => {
-  setProducts(products.filter((product) => product.id !== id));
-};
-
-const handleEdit = (product: (typeof initialProducts)[number]) => {
-  setEditingProduct({ ...product });
-};
-
-const handleSaveEdit = async () => {
-  if (!editingProduct) return;
-
-  try {
-    const response = await fetch(
-      `${API_URL}/api/products/${editingProduct.id}`,
-      {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          Name: editingProduct.name,
-          Stock: Number(editingProduct.stock),
-          Category: editingProduct.type,
-        }),
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.log(data);
-      return;
-    }
-
-    const refreshResponse = await fetch(`${API_URL}/api/products`);
-    const refreshData = await refreshResponse.json();
-
-    const formattedProducts = refreshData.map((item: any) => ({
-      id: String(item.Product_ID),
-      name: item.Name,
-      type: item.Category,
-      price: 0,
-      stock: item.Stock,
-    }));
-
-    setProducts(formattedProducts);
-    setEditingProduct(null);
-  } catch (error) {
-    console.error('Edit product error:', error);
-  }
-};
-
-  return (
-
-    <ScrollView style={styles.container}>
-{/* Header */}
-<View style={styles.header}>
-  <View>
-    <Text style={styles.shopName}>CHARGEHUB</Text>
-
-    <Text style={styles.logo}>
-      Cable Collection
-    </Text>
-
-    <Text style={styles.subtitle}>
-      Find your perfect cable
-    </Text>
-  </View>
-
-  <TouchableOpacity
-    style={styles.cartCircle}
-    onPress={() => setShowCart(true)}
-  >
-    <Text style={styles.cartIcon}>🛒</Text>
-
-    {cart.length > 0 && (
-      <View style={styles.cartBadge}>
-        <Text style={styles.cartBadgeText}>
-          {cart.length}
-        </Text>
-      </View>
-    )}
-  </TouchableOpacity>
-</View>
-
-{showCart && (
-  <View style={styles.cartPanel}>
-    <View style={styles.cartHeader}>
-      <Text style={styles.cartTitle}>🛒 Shopping Cart</Text>
-
-      <TouchableOpacity onPress={() => setShowCart(false)}>
-        <Text style={styles.closeCart}>✕</Text>
-      </TouchableOpacity>
-    </View>
-
-    {cart.length === 0 ? (
-      <Text style={styles.emptyCart}>
-        Your cart is empty
-      </Text>
-    ) : (
-      <>
-        {cart.map((product, index) => (
-          <View style={styles.cartItem} key={`${product.id}-${index}`}>
-            <View style={styles.cartItemInfo}>
-              <Text style={styles.cartItemName}>
-                {product.name}
-              </Text>
-
-              <Text style={styles.cartItemPrice}>
-                ฿{product.price}
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              style={styles.removeCartButton}
-              onPress={() => removeFromCart(index)}
-            >
-              <Text style={styles.removeCartText}>
-                Remove
-              </Text>
-            </TouchableOpacity>
-          </View>
-        ))}
-
-        <View style={styles.cartTotal}>
-          <Text style={styles.cartTotalText}>
-            TOTAL
-          </Text>
-
-          <Text style={styles.cartTotalPrice}>
-            ฿{cart.reduce((sum, product) => sum + product.price, 0)}
-          </Text>
-        </View>
-
-<TouchableOpacity
-  style={styles.checkoutButton}
-  onPress={() => setShowCheckout(true)}
->
-  <Text style={styles.checkoutText}>
-    CHECKOUT
-  </Text>
-</TouchableOpacity>
-      </>
-    )}
-  </View>
-)}
-
-{showCheckout && (
-  <View style={styles.checkoutPanel}>
-    <View style={styles.cartHeader}>
-      <Text style={styles.checkoutTitle}>
-        Order Summary
-      </Text>
-
-      <TouchableOpacity
-        onPress={() => setShowCheckout(false)}
-      >
-        <Text style={styles.closeCart}>✕</Text>
-      </TouchableOpacity>
-    </View>
-
-    {cart.map((product, index) => (
-      <View
-        style={styles.checkoutItem}
-        key={`${product.id}-${index}`}
-      >
-        <Text style={styles.checkoutItemName}>
-          {product.name}
-        </Text>
-
-        <Text style={styles.checkoutItemPrice}>
-          ฿{product.price}
-        </Text>
-      </View>
-    ))}
-
-    <View style={styles.checkoutTotal}>
-      <Text style={styles.checkoutTotalText}>
-        TOTAL
-      </Text>
-
-      <Text style={styles.checkoutTotalPrice}>
-        ฿{cart.reduce(
-          (sum, product) => sum + product.price,
-          0
-        )}
-      </Text>
-    </View>
-
-    <TouchableOpacity
-      style={styles.confirmButton}
-      onPress={() => {
-        setCart([]);
-        setShowCheckout(false);
-        setShowCart(false);
-      }}
-    >
-      <Text style={styles.confirmButtonText}>
-        ✓ CONFIRM ORDER
-      </Text>
-    </TouchableOpacity>
-
-    <TouchableOpacity
-      style={styles.backButton}
-      onPress={() => setShowCheckout(false)}
-    >
-      <Text style={styles.backButtonText}>
-        BACK TO CART
-      </Text>
-    </TouchableOpacity>
-  </View>
-)}
-
-      {/* Welcome */}
-      <View style={styles.welcomeBox}>
-        <Text style={styles.welcomeTitle}>
-          สายชาร์จคุณภาพดี
-        </Text>
-
-        <Text style={styles.welcomeText}>
-          เลือกสายชาร์จที่เหมาะกับอุปกรณ์ของคุณ
-        </Text>
-
-        <TouchableOpacity style={styles.shopButton}>
-          <Text style={styles.shopButtonText}>
-            ดูสินค้าทั้งหมด
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-{/* Products Header */}
-<View style={styles.productsHeader}>
-  <View>
-    <Text style={styles.productsTitle}>
-      Your Products
-    </Text>
-
-    <Text style={styles.productCount}>
-      {filteredProducts.length} products
-    </Text>
-  </View>
-
-  <View style={styles.totalBox}>
-    <Text style={styles.totalNumber}>
-      {products.length}
-    </Text>
-
-    <Text style={styles.totalText}>
-      TOTAL
-    </Text>
-  </View>
-</View>
-
-{/* Search and Add Product */}
-<View style={styles.searchRow}>
-  <TextInput
-    style={styles.searchInput}
-    placeholder="🔍  Search products..."
-    value={searchQuery}
-    onChangeText={setSearchQuery}
-    onSubmitEditing={handleSearch}
-  />
-
-<TouchableOpacity
-  style={styles.addProductButton}
-  onPress={() => setShowAddForm(true)}
->
-    <Text style={styles.addProductText}>
-      ＋ ADD PRODUCT
-    </Text>
-  </TouchableOpacity>
-</View>
-{showAddForm && (
-  <View style={styles.editForm}>
-    <Text style={styles.editFormTitle}>Add New Product</Text>
-
-    <Text style={styles.inputLabel}>Product Name</Text>
-    <TextInput
-      style={styles.formInput}
-      placeholder="เช่น USB-C Cable 2M"
-      value={newProduct.name}
-      onChangeText={(text) =>
-        setNewProduct({ ...newProduct, name: text })
-      }
-    />
-
-    <Text style={styles.inputLabel}>Type</Text>
-    <TextInput
-      style={styles.formInput}
-      placeholder="เช่น USB-C"
-      value={newProduct.type}
-      onChangeText={(text) =>
-        setNewProduct({ ...newProduct, type: text })
-      }
-    />
-
-    <Text style={styles.inputLabel}>Price</Text>
-    <TextInput
-      style={styles.formInput}
-      placeholder="เช่น 159"
-      keyboardType="numeric"
-      value={newProduct.price}
-      onChangeText={(text) =>
-        setNewProduct({ ...newProduct, price: text })
-      }
-    />
-
-    <Text style={styles.inputLabel}>Stock</Text>
-    <TextInput
-      style={styles.formInput}
-      placeholder="เช่น 20"
-      keyboardType="numeric"
-      value={newProduct.stock}
-      onChangeText={(text) =>
-        setNewProduct({ ...newProduct, stock: text })
-      }
-    />
-
-    <View style={styles.formButtons}>
-      <TouchableOpacity
-        style={styles.cancelButton}
-        onPress={() => setShowAddForm(false)}
-      >
-        <Text style={styles.cancelButtonText}>CANCEL</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.saveButton}
-        onPress={handleAddProduct}
-      >
-        <Text style={styles.saveButtonText}>ADD PRODUCT</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-)}
-
-{editingProduct && (
-  <View style={styles.editForm}>
-    <Text style={styles.editFormTitle}>
-      Edit Product
-    </Text>
-
-    <Text style={styles.inputLabel}>
-      Product Name
-    </Text>
-
-    <TextInput
-      style={styles.formInput}
-      value={editingProduct.name}
-      onChangeText={(text) =>
-        setEditingProduct({
-          ...editingProduct,
-          name: text,
-        })
-      }
-    />
-
-    <Text style={styles.inputLabel}>
-      Type
-    </Text>
-
-    <TextInput
-      style={styles.formInput}
-      value={editingProduct.type}
-      onChangeText={(text) =>
-        setEditingProduct({
-          ...editingProduct,
-          type: text,
-        })
-      }
-    />
-
-    <Text style={styles.inputLabel}>
-      Price
-    </Text>
-
-    <TextInput
-      style={styles.formInput}
-      value={String(editingProduct.price)}
-      keyboardType="numeric"
-      onChangeText={(text) =>
-        setEditingProduct({
-          ...editingProduct,
-          price: Number(text) || 0,
-        })
-      }
-    />
-
-    <Text style={styles.inputLabel}>
-      Stock
-    </Text>
-
-    <TextInput
-      style={styles.formInput}
-      value={String(editingProduct.stock)}
-      keyboardType="numeric"
-      onChangeText={(text) =>
-        setEditingProduct({
-          ...editingProduct,
-          stock: Number(text) || 0,
-        })
-      }
-    />
-
-<View style={styles.formButtons}>
-  <TouchableOpacity
-    style={styles.cancelButton}
-    onPress={() => setEditingProduct(null)}
-  >
-    <Text style={styles.cancelButtonText}>
-      CANCEL
-    </Text>
-  </TouchableOpacity>
-
-  <TouchableOpacity
-    style={styles.saveButton}
-    onPress={handleSaveEdit}
-  >
-    <Text style={styles.saveButtonText}>
-      SAVE
-    </Text>
-  </TouchableOpacity>
-</View>
-
-</View>
-)}
-{filteredProducts.map((product) => (
-        <View key={product.id} style={styles.productCard}>
-          <View style={styles.productImage}>
-            <Text style={styles.cableIcon}>🔌</Text>
-          </View>
-
-          <View style={styles.productInfo}>
-            <Text style={styles.productName}>
-              {product.name}
-            </Text>
-
-            <Text style={styles.productType}>
-              ประเภท: {product.type}
-            </Text>
-
-            <Text style={styles.price}>
-              ฿{product.price}
-            </Text>
-
-            <Text style={styles.stock}>
-              เหลือ {product.stock} ชิ้น
-            </Text>
-          </View>
-
-<TouchableOpacity
-  style={styles.editButton}
-  onPress={() => handleEdit(product)}
->
-              <Text style={styles.editButtonText}>
-                ✏️ Edit
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-  style={styles.deleteButton}
-  onPress={() => handleDelete(product.id)}
->
-              <Text style={styles.deleteButtonText}>
-                🗑 Delete
-              </Text>
-      </TouchableOpacity>
-
-<TouchableOpacity
-  style={styles.addButton}
-  onPress={() => addToCart(product)}
->
-  <Text style={styles.addButtonText}>
-    +
-  </Text>
-</TouchableOpacity>
-
-    </View>
-))}
-
-      {/* Bottom space */}
-      <View style={styles.bottomSpace} />
-    </ScrollView>
-  );
-}
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F7F6',
-  },
+ header: {
+  backgroundColor: '#FFF7F7',
+  paddingHorizontal: 24,
+  paddingTop: 28,
+  paddingBottom: 28,
+  borderBottomLeftRadius: 28,
+  borderBottomRightRadius: 28,
+  overflow: 'hidden',
+  position: 'relative',
+zIndex: 10,
+},
 
-header: {
-  backgroundColor: '#1F6B4F',
-  paddingTop: 45,
-  paddingBottom: 25,
-  paddingHorizontal: 25,
+headerTop: {
   flexDirection: 'row',
   justifyContent: 'space-between',
+  alignItems: 'flex-start',
+},
+
+brand: {
+  fontSize: 22,
+  fontWeight: '900',
+  letterSpacing: 1,
+  color: '#111111',
+},
+
+brandRed: {
+  color: '#E53935',
+},
+
+brandSub: {
+  fontSize: 9,
+  letterSpacing: 2,
+  color: '#888888',
+  marginTop: 2,
+},
+
+heroTitle: {
+  fontSize: 42,
+  fontWeight: '900',
+  color: '#7F1717',
+  marginTop: 28,
+  lineHeight: 44,
+},
+
+heroTitleRed: {
+  fontSize: 42,
+  fontWeight: '900',
+  color: '#E53935',
+  lineHeight: 44,
+},
+
+heroSubtitle: {
+  fontSize: 11,
+  letterSpacing: 3,
+  color: '#A66A6A',
+  marginTop: 12,
+  lineHeight: 18,
+},
+
+headerActions: {
+  flexDirection: 'row',
   alignItems: 'center',
+  gap: 10,
+  position: 'relative',
+  zIndex: 9999,
+  elevation: 10,
+},
+
+searchBox: {
+  height: 58,
+  backgroundColor: '#FFFFFF',
+  borderRadius: 30,
+  marginTop: 25,
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingLeft: 18,
+  paddingRight: 7,
+  borderWidth: 1,
+  borderColor: '#F3D5D5',
+},
+
+searchIcon: {
+  fontSize: 28,
+  color: '#D32F2F',
+  marginRight: 8,
+},
+
+searchButton: {
+  width: 45,
+  height: 45,
+  borderRadius: 23,
+  backgroundColor: '#E53935',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+
+searchButtonText: {
+  color: '#FFFFFF',
+  fontSize: 25,
+  fontWeight: 'bold',
+},
+
+powerText: {
+  textAlign: 'right',
+  color: '#C62828',
+  fontSize: 13,
+  fontWeight: '600',
+  fontStyle: 'italic',
+  marginTop: 18,
+  marginRight: 10,
+},
+
+container: {
+  flex: 1,
+  backgroundColor: '#FFF7F7',
+},
+loginBox: {
+  backgroundColor: '#FFFFFF',
+  marginHorizontal: 20,
+  marginTop: 20,
+  marginBottom: 20,
+  padding: 24,
+  borderRadius: 24,
+  borderWidth: 1,
+  borderColor: '#F3D5D5',
+},
+
+loginWelcome: {
+  fontSize: 28,
+  fontWeight: '900',
+  color: '#222222',
+  marginBottom: 6,
+},
+
+loginSubtitle: {
+  fontSize: 13,
+  color: '#999999',
+  marginBottom: 20,
+},
+
+loginInput: {
+  height: 48,
+  backgroundColor: '#FFF7F7',
+  borderWidth: 1,
+  borderColor: '#F0CACA',
+  borderRadius: 14,
+  paddingHorizontal: 16,
+  fontSize: 14,
+  color: '#222222',
+  marginBottom: 12,
+},
+
+loginButton: {
+  height: 48,
+  backgroundColor: '#E53935',
+  borderRadius: 24,
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginTop: 4,
+},
+
+loginButtonText: {
+  color: '#FFFFFF',
+  fontSize: 14,
+  fontWeight: '900',
+},
+
+loginPower: {
+  textAlign: 'center',
+  color: '#D66A6A',
+  fontSize: 11,
+  fontWeight: '600',
+  fontStyle: 'italic',
+  marginTop: 16,
 },
 
 shopName: {
@@ -672,23 +219,47 @@ shopName: {
   letterSpacing: 2,
 },
 
+logoutButton: {
+  height: 44,
+  paddingHorizontal: 18,
+  borderRadius: 22,
+  backgroundColor: '#FFFFFF',
+  borderWidth: 1,
+  borderColor: '#E53935',
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginLeft: 8,
+  zIndex: 9999,
+  elevation: 10,
+},
+
+logoutButtonText: {
+  color: '#E53935',
+  fontSize: 14,
+  fontWeight: 'bold',
+},
+
 cartCircle: {
-  width: 58,
-  height: 58,
-  borderRadius: 29,
-  backgroundColor: '#F4C542',
+  width: 44,
+  height: 44,
+  borderRadius: 22,
+  backgroundColor: '#FFFFFF',
   justifyContent: 'center',
   alignItems: 'center',
   position: 'relative',
+  zIndex: 9999,
+  elevation: 10,
+  borderWidth: 1,
+  borderColor: '#EEEEEE',
 },
 
 cartBadge: {
   position: 'absolute',
-  top: -4,
-  right: -4,
-  minWidth: 22,
-  height: 22,
-  borderRadius: 11,
+  top: -5,
+  right: -5,
+  minWidth: 20,
+  height: 20,
+  borderRadius: 10,
   backgroundColor: '#E53935',
   justifyContent: 'center',
   alignItems: 'center',
@@ -720,7 +291,7 @@ cartIcon: {
   welcomeBox: {
     margin: 20,
     padding: 20,
-    backgroundColor: '#FFFFFF',
+backgroundColor: '#FFFFFF',
     borderRadius: 16,
   },
 
@@ -737,12 +308,13 @@ cartIcon: {
     marginBottom: 15,
   },
 
-  shopButton: {
-    backgroundColor: '#1F6B4F',
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
+shopButton: {
+  height: 45,
+  backgroundColor: '#E53935',
+  borderRadius: 24,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
 
   shopButtonText: {
     color: '#FFFFFF',
@@ -810,10 +382,10 @@ searchInput: {
 },
 
 addProductButton: {
-  backgroundColor: '#1F6B4F',
-  height: 48,
-  paddingHorizontal: 18,
-  borderRadius: 12,
+  height: 45,
+  paddingHorizontal: 20,
+  borderRadius: 24,
+  backgroundColor: '#E53935',
   justifyContent: 'center',
   alignItems: 'center',
 },
@@ -867,7 +439,7 @@ addProductText: {
   price: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1F6B4F',
+    color: '#E53935',
     marginTop: 5,
   },
 
@@ -883,13 +455,12 @@ addProductText: {
     gap: 8,
   },
 
-  editButton: {
-    height: 36,
-    backgroundColor: '#1F6B4F',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+editButton: {
+  backgroundColor: '#7F1717',
+  borderRadius: 8,
+  paddingHorizontal: 10,
+  paddingVertical: 8,
+},
 
   editButtonText: {
     color: '#FFFFFF',
@@ -897,21 +468,19 @@ addProductText: {
     fontWeight: 'bold',
   },
 
-  deleteButton: {
-    height: 36,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#FFB3B3',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+deleteButton: {
+  backgroundColor: '#FFFFFF',
+  borderWidth: 1,
+  borderColor: '#E53935',
+  borderRadius: 8,
+  paddingHorizontal: 10,
+  paddingVertical: 8,
+},
 
-  deleteButtonText: {
-    color: '#E53935',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
+deleteButtonText: {
+  color: '#E53935',
+  fontWeight: 'bold',
+},
 
   editForm: {
     backgroundColor: '#FFFFFF',
@@ -1199,3 +768,861 @@ addButtonText: {
 },
 
 });
+
+export default function HomeScreen() {
+  const API_URL = 'http://119.59.102.161:3087';
+
+  const [products, setProducts] = useState(initialProducts);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [authToken, setAuthToken] = useState('');
+  const [userRole, setUserRole] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [editingProduct, setEditingProduct] = useState<(typeof initialProducts)[number] | null>(null);
+  const [cart, setCart] = useState<(typeof initialProducts)[number][]>([]);
+  const [showCart, setShowCart] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false);
+
+  const [showAddForm, setShowAddForm] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+ const handleLogin = async () => {
+  try {
+    const response = await fetch(`${API_URL}/api/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        username,
+        password,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.log(data.message);
+      return;
+    }
+
+    setAuthToken(data.token);
+    setUserRole(data.user.role);
+
+    console.log('Login สำเร็จ');
+    console.log('Role:', data.user.role);
+  } catch (error) {
+    console.error('Login error:', error);
+  }
+};
+
+const handleLogout = () => {
+  setAuthToken('');
+  setUserRole('');
+  setUsername('');
+  setPassword('');
+};
+
+  const apiCall = async (url: string, options: RequestInit = {}) => {
+  const response = await fetch(`${API_URL}${url}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${authToken}`,
+      ...(options.headers || {}),
+    },
+  });
+
+  return response;
+};
+
+useEffect(() => {
+  if (!authToken) return;
+
+  const loadProducts = async () => {
+    try {
+      const response = await apiCall('/api/products?page=1&limit=20');
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.log(data.message);
+        return;
+      }
+
+      const formattedProducts = data.items.map((item: any) => ({
+        id: String(item.Product_ID),
+        name: item.Name,
+        type: item.Category,
+        price: Number(item.Price),
+        stock: item.Stock,
+        image: item.image,
+      }));
+
+      setProducts(formattedProducts);
+    } catch (error) {
+      console.error('GET products error:', error);
+    }
+  };
+
+  loadProducts();
+}, [authToken]);
+
+const [newProduct, setNewProduct] = useState({
+  name: '',
+  type: '',
+  price: '',
+  stock: '',
+  image: '',
+});
+
+  const addToCart = (product: (typeof initialProducts)[number]) => {
+  setCart([...cart, product]);
+};
+
+const removeFromCart = (index: number) => {
+  setCart(cart.filter((_, i) => i !== index));
+};
+
+const handleSearch = async () => {
+  try {
+const response = await apiCall(
+  `/api/products?q=${encodeURIComponent(searchQuery)}&page=1&limit=20`
+);
+
+    const data = await response.json();
+
+    const formattedProducts = data.items.map((item: any) => ({
+      id: String(item.Product_ID),
+      name: item.Name,
+      type: item.Category,
+      price: Number(item.Price),
+      stock: item.Stock,
+      image: item.image,
+    }));
+
+    setProducts(formattedProducts);
+  } catch (error) {
+    console.error('Search products error:', error);
+  }
+};
+
+const handleAddProduct = async () => {
+  if (
+    !newProduct.name ||
+    !newProduct.type ||
+    !newProduct.price ||
+    !newProduct.stock
+  ) {
+    console.error('Add product error: กรุณากรอกข้อมูลให้ครบ');
+    return;
+  }
+
+  try {
+    const response = await apiCall('/api/products', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        Productcode: `USB-C-${Date.now()}`,
+        Name: newProduct.name,
+        Price: Number(newProduct.price),
+        Stock: Number(newProduct.stock),
+        Category: newProduct.type,
+        Location: 'Sriracha',
+        Status: 'Active',
+        image: newProduct.image,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Add product failed:', response.status, data);
+      return;
+    }
+
+    setProducts((currentProducts) => [
+      ...currentProducts,
+      {
+        id: String(data.productId),
+        name: newProduct.name,
+        type: newProduct.type,
+        price: Number(newProduct.price),
+        stock: Number(newProduct.stock),
+        image: newProduct.image,
+      },
+    ]);
+
+    setNewProduct({
+      name: '',
+      type: '',
+      price: '',
+      stock: '',
+      image: '',
+    });
+
+    setShowAddForm(false);
+
+  } catch (error) {
+    console.error('Add product error:', error);
+  }
+};
+
+    const filteredProducts = products.filter((product) =>
+     product.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+const handleDelete = async (id: string) => {
+  const confirmed = window.confirm(
+    'ต้องการลบสินค้านี้ใช่หรือไม่?'
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    const response = await apiCall(`/api/products/${id}`, {
+      method: 'DELETE',
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.log(data.message);
+      return;
+    }
+
+    setProducts(
+      products.filter((product) => product.id !== id)
+    );
+
+    console.log(data.message);
+
+  } catch (error) {
+    console.error('Delete product error:', error);
+  }
+};
+
+const handleEdit = (product: (typeof initialProducts)[number]) => {
+  setEditingProduct({ ...product });
+
+  setTimeout(() => {
+    scrollViewRef.current?.scrollTo({
+      y: 0,
+      animated: true,
+    });
+  }, 100);
+};
+
+const handleSaveEdit = async () => {
+  if (!editingProduct) return;
+
+  try {
+const response = await apiCall(
+  `/api/products/${editingProduct.id}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          Name: editingProduct.name,
+          Stock: Number(editingProduct.stock),
+          Price: Number(editingProduct.price),
+          Category: editingProduct.type,
+          image: editingProduct.image,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.log(data);
+      return;
+    }
+
+    const refreshResponse = await apiCall('/api/products?page=1&limit=20');
+    const refreshData = await refreshResponse.json();
+
+const formattedProducts = refreshData.items.map((item: any) => ({
+      id: String(item.Product_ID),
+      name: item.Name,
+      type: item.Category,
+      price: Number(item.Price),
+      stock: item.Stock,
+    }));
+
+    setProducts(formattedProducts);
+    setEditingProduct(null);
+  } catch (error) {
+    console.error('Edit product eฆrror:', error);
+  }
+};
+
+return (
+  <ScrollView
+
+  ref={scrollViewRef}
+  style={styles.container}
+>
+
+{!authToken && (
+  <View style={styles.loginBox}>
+    <Text style={styles.loginWelcome}>Welcome Back ♡</Text>
+
+    <Text style={styles.loginSubtitle}>
+      Log in to your ChargeHub account
+    </Text>
+
+    <TextInput
+      style={styles.loginInput}
+      placeholder="Username"
+      placeholderTextColor="#999"
+      value={username}
+      onChangeText={setUsername}
+    />
+
+    <TextInput
+      style={styles.loginInput}
+      placeholder="Password"
+      placeholderTextColor="#999"
+      secureTextEntry
+      value={password}
+      onChangeText={setPassword}
+    />
+
+
+    <TouchableOpacity
+      style={styles.loginButton}
+      onPress={handleLogin}
+    >
+      <Text style={styles.loginButtonText}>
+        Login                         →
+      </Text>
+    </TouchableOpacity>
+
+    <Text style={styles.loginPower}>
+      ✦  Good Power. Better You ♡
+    </Text>
+      </View>
+    )}
+
+{/* Header */}
+<View style={styles.header}>
+  <View style={styles.headerTop}>
+
+    {/* Logo */}
+    <View>
+      <Text style={styles.brand}>
+        CHARGE<Text style={styles.brandRed}>HUB</Text>
+      </Text>
+
+      <Text style={styles.brandSub}>
+        CABLES FOR A BRIGHTER YOU
+      </Text>
+
+      <Text style={styles.heroTitle}>
+        Cable
+      </Text>
+
+      <Text style={styles.heroTitleRed}>
+        Collection ♡
+      </Text>
+
+      <Text style={styles.heroSubtitle}>
+        SMALL CABLES{"\n"}BIGGER MOMENTS
+      </Text>
+    </View>
+
+    {/* Cart + Logout */}
+    <View style={styles.headerActions}>
+
+      <TouchableOpacity
+        style={styles.cartCircle}
+        onPress={() => alert('CLICK CART')}
+      >
+        <Text style={styles.cartIcon}>🛒</Text>
+
+        {cart.length > 0 && (
+          <View style={styles.cartBadge}>
+            <Text style={styles.cartBadgeText}>
+              {cart.length}
+            </Text>
+          </View>
+        )}
+      </TouchableOpacity>
+
+      {authToken && (
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={() => alert('CLICK LOGOUT')}
+        >
+          <Text style={styles.logoutButtonText}>
+            ⇥ Logout
+          </Text>
+        </TouchableOpacity>
+      )}
+
+    </View>
+  </View>
+
+  {/* Search */}
+  <View style={styles.searchBox}>
+    <Text style={styles.searchIcon}>⌕</Text>
+
+    <TextInput
+      style={styles.searchInput}
+      placeholder="Search cables, brands, or categories..."
+      placeholderTextColor="#999"
+      value={searchQuery}
+      onChangeText={setSearchQuery}
+    />
+
+    <TouchableOpacity
+      style={styles.searchButton}
+      onPress={handleSearch}
+    >
+      <Text style={styles.searchButtonText}>→</Text>
+    </TouchableOpacity>
+  </View>
+
+  <Text style={styles.powerText}>
+    Good Power. Better You ♡
+  </Text>
+</View>  {/* Search */}
+
+{showCart && (
+  <View style={styles.cartPanel}>
+    <View style={styles.cartHeader}>
+      <Text style={styles.cartTitle}>🛒 Shopping Cart</Text>
+
+      <TouchableOpacity onPress={() => setShowCart(false)}>
+        <Text style={styles.closeCart}>✕</Text>
+      </TouchableOpacity>
+    </View>
+
+    {cart.length === 0 ? (
+      <Text style={styles.emptyCart}>
+        Your cart is empty
+      </Text>
+    ) : (
+      <>
+        {cart.map((product, index) => (
+          <View style={styles.cartItem} key={`${product.id}-${index}`}>
+            <View style={styles.cartItemInfo}>
+              <Text style={styles.cartItemName}>
+                {product.name}
+              </Text>
+
+              <Text style={styles.cartItemPrice}>
+                ฿{product.price}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.removeCartButton}
+              onPress={() => removeFromCart(index)}
+            >
+              <Text style={styles.removeCartText}>
+                Remove
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+
+        <View style={styles.cartTotal}>
+          <Text style={styles.cartTotalText}>
+            TOTAL
+          </Text>
+
+          <Text style={styles.cartTotalPrice}>
+            ฿{cart.reduce((sum, product) => sum + product.price, 0)}
+          </Text>
+        </View>
+
+<TouchableOpacity
+  style={styles.checkoutButton}
+onPress={() => alert('CLICK CHECKOUT')}
+>
+  <Text style={styles.checkoutText}>
+    CHECKOUT
+  </Text>
+</TouchableOpacity>
+      </>
+    )}
+  </View>
+)}
+
+{showCheckout && (
+  <View style={styles.checkoutPanel}>
+    <View style={styles.cartHeader}>
+      <Text style={styles.checkoutTitle}>
+        Order Summary
+      </Text>
+
+      <TouchableOpacity
+        onPress={() => setShowCheckout(false)}
+      >
+        <Text style={styles.closeCart}>✕</Text>
+      </TouchableOpacity>
+    </View>
+
+    {cart.map((product, index) => (
+      <View
+        style={styles.checkoutItem}
+        key={`${product.id}-${index}`}
+      >
+        <Text style={styles.checkoutItemName}>
+          {product.name}
+        </Text>
+
+        <Text style={styles.checkoutItemPrice}>
+          ฿{product.price}
+        </Text>
+      </View>
+    ))}
+
+    <View style={styles.checkoutTotal}>
+      <Text style={styles.checkoutTotalText}>
+        TOTAL
+      </Text>
+
+      <Text style={styles.checkoutTotalPrice}>
+        ฿{cart.reduce(
+          (sum, product) => sum + product.price,
+          0
+        )}
+      </Text>
+    </View>
+
+    <TouchableOpacity
+      style={styles.confirmButton}
+      onPress={() => {
+        setCart([]);
+        setShowCheckout(false);
+        setShowCart(false);
+      }}
+    >
+      <Text style={styles.confirmButtonText}>
+        ✓ CONFIRM ORDER
+      </Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={styles.backButton}
+      onPress={() => setShowCheckout(false)}
+    >
+      <Text style={styles.backButtonText}>
+        BACK TO CART
+      </Text>
+    </TouchableOpacity>
+  </View>
+)}
+
+{/* Products Header */}
+<View style={styles.productsHeader}>
+  <View>
+    <Text style={styles.productsTitle}>
+      Your Products
+    </Text>
+
+    <Text style={styles.productCount}>
+      {filteredProducts.length} products
+    </Text>
+  </View>
+
+  <View style={styles.totalBox}>
+    <Text style={styles.totalNumber}>
+      {products.length}
+    </Text>
+
+    <Text style={styles.totalText}>
+      TOTAL
+    </Text>
+  </View>
+</View>
+
+{/* Add Product */}
+<TouchableOpacity
+  style={styles.addProductButton}
+  onPress={() => setShowAddForm(true)}
+>
+  <Text style={styles.addProductText}>
+    ＋ ADD PRODUCT
+  </Text>
+</TouchableOpacity>
+
+{showAddForm && (
+  <View style={styles.editForm}>
+    <Text style={styles.editFormTitle}>Add New Product</Text>
+
+    <Text style={styles.inputLabel}>Product Name</Text>
+    <TextInput
+      style={styles.formInput}
+      placeholder="เช่น USB-C Cable 2M"
+      value={newProduct.name}
+      onChangeText={(text) =>
+        setNewProduct({ ...newProduct, name: text })
+      }
+    />
+
+    <Text style={styles.inputLabel}>Type</Text>
+    <TextInput
+      style={styles.formInput}
+      placeholder="เช่น USB-C"
+      value={newProduct.type}
+      onChangeText={(text) =>
+        setNewProduct({ ...newProduct, type: text })
+      }
+    />
+
+    <Text style={styles.inputLabel}>Price</Text>
+    <TextInput
+      style={styles.formInput}
+      placeholder="เช่น 159"
+      keyboardType="numeric"
+      value={newProduct.price}
+      onChangeText={(text) =>
+        setNewProduct({ ...newProduct, price: text })
+      }
+    />
+
+    <Text style={styles.inputLabel}>Stock</Text>
+    <TextInput
+      style={styles.formInput}
+      placeholder="เช่น 20"
+      keyboardType="numeric"
+      value={newProduct.stock}
+      onChangeText={(text) =>
+        setNewProduct({ ...newProduct, stock: text })
+      }
+    />
+
+    <Text style={styles.inputLabel}>Image</Text>
+
+<input
+  type="file"
+  accept="image/*"
+  onChange={(event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onloadend = () => {
+      setNewProduct({
+        ...newProduct,
+        image: reader.result as string,
+      });
+    };
+
+    reader.readAsDataURL(file);
+  }}
+/>
+
+{newProduct.image && (
+  <img
+    src={newProduct.image}
+    alt="Preview"
+    style={{
+      width: 100,
+      height: 100,
+      objectFit: 'cover',
+      marginTop: 10,
+      borderRadius: 12,
+    }}
+  />
+)}
+
+    <View style={styles.formButtons}>
+      <TouchableOpacity
+        style={styles.cancelButton}
+        onPress={() => setShowAddForm(false)}
+      >
+        <Text style={styles.cancelButtonText}>CANCEL</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.saveButton}
+        onPress={handleAddProduct}
+      >
+        <Text style={styles.saveButtonText}>ADD PRODUCT</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+)}
+
+{editingProduct && (
+  <View style={styles.editForm}>
+    <Text style={styles.editFormTitle}>
+      Edit Product
+    </Text>
+
+    <Text style={styles.inputLabel}>
+      Product Name
+    </Text>
+
+    <TextInput
+      style={styles.formInput}
+      value={editingProduct.name}
+      onChangeText={(text) =>
+        setEditingProduct({
+          ...editingProduct,
+          name: text,
+        })
+      }
+    />
+
+    <Text style={styles.inputLabel}>
+      Type
+    </Text>
+
+    <TextInput
+      style={styles.formInput}
+      value={editingProduct.type}
+      onChangeText={(text) =>
+        setEditingProduct({
+          ...editingProduct,
+          type: text,
+        })
+      }
+    />
+
+    <Text style={styles.inputLabel}>
+      Price
+    </Text>
+
+    <TextInput
+      style={styles.formInput}
+      value={String(editingProduct.price)}
+      keyboardType="numeric"
+      onChangeText={(text) =>
+        setEditingProduct({
+          ...editingProduct,
+          price: Number(text) || 0,
+        })
+      }
+    />
+
+    <Text style={styles.inputLabel}>
+      Stock
+    </Text>
+
+    <TextInput
+      style={styles.formInput}
+      value={String(editingProduct.stock)}
+      keyboardType="numeric"
+      onChangeText={(text) =>
+        setEditingProduct({
+          ...editingProduct,
+          stock: Number(text) || 0,
+        })
+      }
+    />
+
+<View style={styles.formButtons}>
+  <TouchableOpacity
+    style={styles.cancelButton}
+    onPress={() => setEditingProduct(null)}
+  >
+    <Text style={styles.cancelButtonText}>
+      CANCEL
+    </Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={styles.saveButton}
+    onPress={handleSaveEdit}
+  >
+    <Text style={styles.saveButtonText}>
+      SAVE
+    </Text>
+  </TouchableOpacity>
+</View>
+
+</View>
+)}
+{filteredProducts.map((product) => (
+        <View key={product.id} style={styles.productCard}>
+          <View style={styles.productImage}>
+          {product.image ? (
+  <img
+    src={product.image}
+    alt={product.name}
+    style={{
+      width: 75,
+      height: 75,
+      objectFit: 'cover',
+      borderRadius: 12,
+    }}
+  />
+) : (
+  <Text style={styles.cableIcon}>🔌</Text>
+)}
+
+          </View>
+
+          <View style={styles.productInfo}>
+            <Text style={styles.productName}>
+              {product.name}
+            </Text>
+
+            <Text style={styles.productType}>
+              ประเภท: {product.type}
+            </Text>
+
+            <Text style={styles.price}>
+              ฿{product.price}
+            </Text>
+
+            <Text style={styles.stock}>
+              เหลือ {product.stock} ชิ้น
+            </Text>
+          </View>
+
+{userRole === 'admin' && (
+  <>
+    <TouchableOpacity
+      style={styles.editButton}
+      onPress={() => {
+  alert('EDIT CLICKED');
+  handleEdit(product);
+}}
+    >
+      <Text style={styles.editButtonText}>
+        ✏️ Edit
+      </Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={styles.deleteButton}
+      onPress={() => handleDelete(product.id)}
+    >
+      <Text style={styles.deleteButtonText}>
+        🗑 Delete
+      </Text>
+    </TouchableOpacity>
+  </>
+)}
+
+<TouchableOpacity
+  style={styles.addButton}
+  onPress={() => addToCart(product)}
+>
+  <Text style={styles.addButtonText}>
+    +
+  </Text>
+</TouchableOpacity>
+
+    </View>
+))}
+
+      {/* Bottom space */}
+      <View style={styles.bottomSpace} />
+    </ScrollView>
+  );
+  }

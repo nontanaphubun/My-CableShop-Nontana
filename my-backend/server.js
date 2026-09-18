@@ -2,6 +2,7 @@ require('dotenv').config();
 const mysql = require('mysql2/promise');
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 const pool = mysql.createPool({
@@ -24,6 +25,58 @@ app.get('/', (req, res) => {
     message: 'CHARGEHUB API is running'
   });
 });
+
+app.post('/api/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    const [users] = await pool.query(
+      'SELECT * FROM users WHERE username = ? AND password = ?',
+      [username, password]
+    );
+
+    if (users.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message: 'Username หรือ Password ไม่ถูกต้อง'
+      });
+    }
+
+    const user = users[0];
+
+    const token = jwt.sign(
+      {
+        user_id: user.user_id,
+        username: user.username,
+        role: user.role
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: '1h'
+      }
+    );
+
+    res.json({
+      success: true,
+      message: 'Login สำเร็จ',
+      token: token,
+      user: {
+        user_id: user.user_id,
+        username: user.username,
+        email: user.email,
+        role: user.role
+      }
+    });
+
+  } catch (error) {
+    console.error('Login error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'ไม่สามารถเข้าสู่ระบบได้'
+    });
+  }
+});
+
 const products = [
   {
     id: 1,
@@ -98,6 +151,7 @@ app.post('/api/products', async (req, res) => {
     const {
       Productcode,
       Name,
+      Price,
       Stock,
       Category,
       Location,
@@ -111,30 +165,34 @@ app.post('/api/products', async (req, res) => {
       });
     }
 
-    const [result] = await pool.query(
-      `INSERT INTO products
-      (Productcode, Name, Stock, Category, Location, Status, image)
-      VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [
-        Productcode || null,
-        Name,
-        Number(Stock),
-        Category || null,
-        Location || null,
-        Status || 'Active',
-        image || null
-      ]
-    );
+    const sql = `INSERT INTO products
+      (Productcode, Name, Price, Stock, Category, Location, Status, image)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+
+    const values = [
+      Productcode ?? null,
+      Name,
+      Number(Price),
+      Number(Stock),
+      Category ?? null,
+      Location ?? null,
+      Status ?? 'Active',
+      image ?? null
+    ];
+
+    const [result] = await pool.query(sql, values);
 
     res.status(201).json({
+      success: true,
       message: 'เพิ่มสินค้าสำเร็จ',
       productId: result.insertId
     });
 
   } catch (error) {
-    console.error('POST products error:', error.message);
+    console.error('POST products error:', error);
     res.status(500).json({
-      message: 'ไม่สามารถเพิ่มสินค้าได้'
+      success: false,
+      message: error.message
     });
   }
 });
@@ -142,27 +200,29 @@ app.post('/api/products', async (req, res) => {
 app.put('/api/products/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { Name, Stock, Category } = req.body;
+    const { Name, Stock, Price, Category, image } = req.body;
 
     if (!Name || Stock === undefined) {
-      return res.status(400).json({
-        message: 'กรุณากรอกข้อมูลสินค้าให้ครบ'
-      });
+res.status(500).json({
+  success: false
+});
     }
 
-    const [result] = await pool.query(
-      `UPDATE products
-       SET Name = ?, Stock = ?, Category = ?
-       WHERE Product_ID = ?`,
-      [
-        Name,
-        Number(Stock),
-        Category || null,
-        id
-      ]
-    );
+const [result] = await pool.query(
+  `UPDATE products
+   SET Name = ?, Stock = ?, Price = ?, Category = ?, image = ?
+   WHERE Product_ID = ?`,
+  [
+    Name,
+    Number(Stock),
+    Number(Price),
+    Category || null,
+    image || null,
+    id
+  ]
+);
 
-    if (result.affectedRows === 0) {
+if (result.affectedRows === 0) {
       return res.status(404).json({
         message: 'ไม่พบสินค้า'
       });
@@ -212,19 +272,15 @@ app.delete('/api/products/:id', async (req, res) => {
 
 async function testMySQL() {
   try {
-    const conn = await pool.getConnection();
     console.log('Connected to MySQL:', process.env.DB_NAME);
-    conn.release();
   } catch (err) {
-    console.error('MySQL Failed:', err.message);
+    console.error('MySQL Failed:', err);
     process.exit(1);
   }
 }
-
 testMySQL();
 
 const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
